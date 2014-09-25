@@ -1,0 +1,48 @@
+EXECUTE uspGetPubStatsJAP'pl'
+
+CREATE PROCEDURE uspGetPubStatsJAP 
+	-- Add the parameters for the stored procedure here
+	@PubCode varchar(20)
+AS
+
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+
+IF(SELECT COUNT(PublisherCode) FROM Publisher WHERE PublisherCode = @PubCode) = 0
+BEGIN
+	PRINT 'No Such Publisher Code Exists!!!!'
+	RETURN
+END
+
+SELECT P.PublisherName AS 'Name',
+
+COUNT(DISTINCT(W.AuthorNum))AS '# of Distinct Authors',
+
+(SELECT COUNT(BookCode)
+FROM Book
+WHERE PublisherCode = @PubCode)AS '# of Books Published',
+
+(SELECT TOP 1 B.Title
+FROM Copy C INNER JOIN Book B ON B.BookCode = C.BookCode
+WHERE PublisherCode = @PubCode
+GROUP BY B.Title ORDER BY COUNT(C.BookCode) DESC)AS 'Book With Highest OnHand Value',
+
+(SELECT TOP 1 (COUNT(C.BookCode)) AS 'Number OnHand'
+FROM Copy C INNER JOIN Book B ON B.BookCode = C.BookCode
+WHERE B.PublisherCode = @PubCode
+GROUP BY B.Title ORDER BY 'Number OnHand' DESC) AS 'Number OnHand',
+
+(SELECT COUNT (*)
+FROM Copy C INNER JOIN Book B ON B.BookCode = C.BookCode
+WHERE B.PublisherCode = @PubCode) AS 'Number in ALL Branches'
+
+FROM Publisher P INNER JOIN Book B on B.PublisherCode = P.PublisherCode
+INNER JOIN Wrote W ON W.BookCode = B.BookCode
+WHERE P.PublisherCode = @PubCode
+GROUP BY P.PublisherName
+END
+GO
